@@ -1,7 +1,10 @@
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import tensorflow as tf
+#import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior() 
+tf.compat.v1.disable_eager_execution()
 import numpy as np
 import os
 import time
@@ -173,7 +176,7 @@ if __name__ == '__main__':
     if len(sys.argv) == 2:
         os.environ["CUDA_VISIBLE_DEVICES"] = sys.argv[1]
 
-    campaign_list = ['2259']#['2997', '2259', '3476', '1458', '3386', '3427', '2261', '2821', '3358']
+    campaign_list = ['2259', 'support']#['2997', '2259', '3476', '1458', '3386', '3427', '2261', '2821', '3358']
 
     for campaign in campaign_list:
         train_file = '../data/' + campaign + '/train.yzbx.txt'
@@ -184,7 +187,8 @@ if __name__ == '__main__':
         lrs = [1e-3]
         batch_sizes = [256]
         reg_lambdas = [0.01]
-        nns = [False, True]
+        nns = [False]
+        #nns = [False, True]
         dimension = int(open(feat_index).readlines()[-1].split('\t')[1][:-1]) + 1
 
         params = []
@@ -202,4 +206,6 @@ if __name__ == '__main__':
         for para in params:
             cox = COX(lr=para[0], batch_size=para[1], dimension=dimension, util_train=para[2], util_test=para[3], campaign=campaign, reg_lambda=para[4], nn=para[5])
             cox.train()
+            print("End of cox train")
             cox.test()
+            print("End of cox test")
