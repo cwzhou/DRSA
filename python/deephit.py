@@ -1,7 +1,10 @@
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import tensorflow as tf
+#import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior() 
+tf.compat.v1.disable_eager_execution()
 import numpy as np
 import os
 import time
@@ -235,6 +238,7 @@ if __name__ == '__main__':
 
         # search hyper parameters
         random.shuffle(params)
+        print('shuffled')
         for para in params:
             deephit = DeepHit(lr=para[0], batch_size=para[1], dimension=dimension, util_train=para[2], util_test=para[3], campaign=campaign, 
                               reg_lambda=para[4], sigma=para[5])
