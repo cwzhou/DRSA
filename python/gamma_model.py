@@ -1,7 +1,10 @@
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import tensorflow as tf
+#import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior() 
+tf.compat.v1.disable_eager_execution()
 import numpy as np
 import os
 import random
@@ -180,7 +183,7 @@ class Model:
 if __name__ == '__main__':
     if len(sys.argv) == 2:
         os.environ["CUDA_VISIBLE_DEVICES"] = sys.argv[1]
-    campaign_list = ['2259']#['3386', '3427', '3476', '1458']#['2997', '2259', '2261', '2821']
+    campaign_list = ['2259','support']#['3386', '3427', '3476', '1458']#['2997', '2259', '2261', '2821']
 
     for campaign in campaign_list:
         train_file = '../data/' + campaign + '/train.yzbx.txt'
@@ -206,12 +209,30 @@ if __name__ == '__main__':
 
         # search hyper parameters
         random.shuffle(params)
+        print("PARAMS ARE:", params)
+        print(len(params))
         for para in params:
-            model = Model(lr_1=para[0], lr_2=para[1], l2_loss_weight=para[2], batch_size=para[3],
-                          dimension=dimension, theta0=para[4].get_max_z(), util_train=para[4], util_test=para[5], campaign=campaign)
+            print("para is:", para)
+            model = Model(lr_1=para[0], 
+                          lr_2=para[1], 
+                          l2_loss_weight=para[2],
+                          batch_size=para[3], 
+                          dimension=dimension, 
+                          theta0=para[4].get_max_z(), 
+                          util_train=para[4], 
+                          util_test=para[5], 
+                          campaign=campaign)
+            print("model done")
             model.train_phase1()
+            print("train phase 1 done")
             model.train_phase2()
+            print("train phase 2 done")
+            print(campaign)
             try:
                 model.test()
+                print("model test done")
             except:
                 continue
+        print("End of loop")
+    print("DONE")
+print("OVER")
