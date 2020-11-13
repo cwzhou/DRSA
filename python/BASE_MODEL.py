@@ -1,4 +1,7 @@
-import tensorflow as tf
+#import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior() 
+tf.compat.v1.disable_eager_execution()
 import numpy as np
 import sys
 from sklearn.metrics import roc_auc_score
@@ -12,12 +15,14 @@ import math
 TRAING_TIME = 15
 SHUFFLE = True
 LOAD_LITTLE_DATA = False
+print("End of import")
 
 class SparseData():
 
     def shuffle(self):
         if SHUFFLE:
             np.random.shuffle(self.index)
+            print("SHUFFLE")
         return self.data[self.index], self.seqlen[self.index], self.labels[self.index], self.market_price[self.index]
 
     def __init__(self, INPUT_FILE, win, all, discount):
@@ -29,6 +34,7 @@ class SparseData():
         COUNT = 1
         max_d = -1
         self.finish_epoch = False
+        print("FOR LOOP is open: starting for loop...")
         for line in fi:
             if COUNT > 10000 and LOAD_LITTLE_DATA:
                 break
@@ -75,13 +81,16 @@ class SparseData():
 
         self.max_d = max_d
         fi.close()
+        print("FOR LOOP closed: end of for loop...")
         self.size = len(self.data)
         self.data = np.array(self.data)
         self.labels = np.array(self.labels)
         self.seqlen = np.array(self.seqlen)
         self.market_price = np.array(self.market_price)
         print("data size ", self.size, "\n")
-        self.index = range(0, self.size)
+        #NEED TO CHANGE BELOW TO NP.ARANGE
+        print("Did you change the line below to np.arange instead of range?")
+        self.index = np.arange(0, self.size)
         self.data, self.seqlen, self.labels, self.market_price = self.shuffle()
         self.batch_id = 0
 
@@ -100,19 +109,28 @@ class SparseData():
 
 class biSparseData():
     def __init__(self, INPUT_FILE, discount):
+        print("1")
         random.seed(time.time())
+        print("2")
         self.winData = SparseData(INPUT_FILE, True, False, discount)
+        print("3")
         self.loseData = SparseData(INPUT_FILE, False, True, discount)#todo lose data get all data
+        print("4")
         self.size = self.winData.size + self.loseData.size
+        print("5")
     def next(self, batch):
         #win = int(random.random() * 100) % 11 == 1# todoe 1/10 get windata
-	win = int(random.random() * 100) % 11 <= 5
+        print("6")
+        win = int(random.random() * 100) % 11 <= 5
+        print("7: ", win)
         if win:
             a, b, c, d = self.winData.next(batch)
             return a, b, c, d, True
+            print("8: if win")
         else:
             a, b, c, d = self.loseData.next(batch)
             return a, b, c, d, False
+            print("8: else")
 
 
 class BASE_RNN():
@@ -120,6 +138,7 @@ class BASE_RNN():
     train_data = None
     def init_matrix(self, shape):
         return tf.random_normal(shape, stddev=0.1)
+        print("tf.random_normal returned")
 
     def __init__(self,  EMB_DIM = 32,
                         FEATURE_SIZE = 13,
@@ -131,7 +150,7 @@ class BASE_RNN():
                         LR = 0.001,
                         GRAD_CLIP = 5.0,
                         L2_NORM = 0.001,
-                        INPUT_FILE = "2997",
+                        INPUT_FILE = "2259",
                         ALPHA = 1.0,
                         BETA = 0.2,
                         ADD_TIME_FEATURE=False,
@@ -171,24 +190,27 @@ class BASE_RNN():
         self.EMB_DIM = EMB_DIM
         self.FEATURE_SIZE = FEATURE_SIZE
         self.MAX_DEN = MAX_DEN
-        self.MAX_SEQ_LEN = MAX_SEQ_LEN / self.DISCOUNT + 10
+        self.MAX_SEQ_LEN = int(MAX_SEQ_LEN / self.DISCOUNT + 10)
         self.LR = LR
         self.GRAD_CLIP = GRAD_CLIP
         self.L2_NORM = L2_NORM
         self.ALPHA = ALPHA
         self.BETA = BETA
+        print("TEST 1")
         self.INPUT_FILE = INPUT_FILE
+        print("TEST 2")
         self.SAVE_LOG = SAVE_LOG
+        print("TEST 3")
         self.TRAIN_FILE = "../data/" + INPUT_FILE + "/train.yzbx.txt"
         self.TEST_FILE = "../data/" + INPUT_FILE + "/test.yzbx.txt"
+        print("TEST 4")
         self.OPEN_TEST = OPEN_TEST
         self.COV_SIZE = COV_SIZE
-
-  
 
         para = None
         if LOG_FILE_NAME != None:
             para = LOG_FILE_NAME
+            print("TEST 5 IF NONE")
         else:
             para = LOG_PREFIX + str(self.EMB_DIM) + "_" + \
                 str(BATCH_SIZE) + "_" + \
@@ -199,16 +221,19 @@ class BASE_RNN():
                 "{:.2f}".format(self.ALPHA) + "_" \
                 "{:.2f}".format(self.BETA) + "_" + str(ADD_TIME_FEATURE) + \
                    "_" + str(self.QRNN_MODEL) + "_" + str(self.COV_SIZE) + "_" + str(DISCOUNT)
-        print para, '\n'
+            print("TEST 5 ELSE")
+        print(para, '\n')
         self.filename = para
         self.train_log_txt_filename = "./" + para + '.train.log.txt'
         if os.path.exists(self.train_log_txt_filename):
             self.exist = True
+            print("TEST 6 IF")
         else:
             if self.SAVE_LOG:
                 self.exist = False
                 self.train_log_txt = open(self.train_log_txt_filename, 'w')
                 self.train_log_txt.close()
+            print("TEST 6 ELSE")
 
     def get_survival_data(self, model, sess):
         alltestdata = SparseData(self.TEST_FILE, True, True)
@@ -227,9 +252,14 @@ class BASE_RNN():
 
 
     def load_data(self):
+        print("beginning load_data")
         self.train_data = biSparseData(self.TRAIN_FILE, self.DISCOUNT)
+        print("LOADED training DATA")
         self.test_data_win = SparseData(self.TEST_FILE, True, False, self.DISCOUNT)
+        print("LOADED testing win DATA")
         self.test_data_lose = SparseData(self.TEST_FILE, False, False, self.DISCOUNT)
+        print("LOADED testing lose DATA")
+        print("end of load_data")
 
     def is_exist(self):
         if self.SAVE_LOG == False:
@@ -273,8 +303,8 @@ class BASE_RNN():
         else:
             # input_x = tf.reshape(tf.tile(input, [1, self.MAX_SEQ_LEN]), [BATCH_SIZE, self.MAX_SEQ_LEN, self.FEATURE_SIZE * self.EMB_DIM])
             rnn_cell = None
-            rnn_cell = tf.contrib.rnn.BasicLSTMCell(num_units=self.STATE_SIZE)
-
+            #rnn_cell = tf.contrib.rnn.BasicLSTMCell(num_units=self.STATE_SIZE)
+            rnn_cell = tf.nn.rnn_cell.BasicLSTMCell(num_units=self.STATE_SIZE)
 
             outputs, (h_c, h_n) = tf.nn.dynamic_rnn(
                 rnn_cell,                   # cell you have chosen
@@ -361,13 +391,19 @@ class BASE_RNN():
 
 
     def train_test(self,sess):
+        print("starting train_test")
         self.load_data()
+        print("OK DATA LOADED")
         init = tf.global_variables_initializer()
+        print("1OK NEW ERROR?")
         self.sess = sess
         sess.run(init)
+        print("2OK NEW ERROR?")
         saver = tf.train.Saver(max_to_keep=100)
+        print("3OK NEW ERROR?")
         self.saver = saver
         TRAIN_LOG_STEP = int((self.train_data.size * 0.1) / self.BATCH_SIZE)
+        print("4OK NEW ERROR?")
         train_auc_arr = []
         train_anlp_arr = []
         train_loss_arr = []
@@ -375,17 +411,23 @@ class BASE_RNN():
         train_auc_prob = []
         total_train_duration = 0
         total_test_duration = 0
+        print("train_test mark1")
         TEST_COUNT = 0
         max_auc = -1
         min_anlp = 200
         enough_test = 0
         last_loss = [9999.0, 9999.0]
         start_time = time.time()
+        print("TRAIN_TEST mark2 begin for loop")
         for step in range(1, self.TRAING_STEPS + 1):
             self.global_step = step
+            print("train_test okie1")
             batch_x, batch_y, batch_len, batch_market_price, win = self.train_data.next(self.BATCH_SIZE)
+            print("train_test okie2")
             if self.ONLY_TRAIN_ANLP:
+                print("only train anlp")
                 if win: #if win
+                    print("win")
                     _, train_anlp, train_loss, train_outputs = sess.run([self.com_train_op, self.anlp_node, self.cost, self.predict],
                                                                     feed_dict={self.tf_x: batch_x,
                                                                              self.tf_y: batch_y,
@@ -398,6 +440,7 @@ class BASE_RNN():
                     train_auc_label.append(batch_y.T[0])
                     train_auc_prob.append(np.array(train_outputs).T[0])
                 else:
+                    print("else1")
                     train_loss, train_outputs = sess.run([self.cost, self.predict], feed_dict={self.tf_x: batch_x,
                                                        self.tf_y: batch_y,
                                                        self.tf_bid_len: batch_len,
@@ -409,7 +452,9 @@ class BASE_RNN():
                     train_auc_label.append(batch_y.T[0])
                     train_auc_prob.append(np.array(train_outputs).T[0])
             else:
+                print("else2")
                 if win: #if win
+                    print("else2 win")
                     _, train_anlp, train_loss, train_outputs, preds = sess.run([self.com_train_op, self.anlp_node, self.cost, self.predict, self.preds],
                                                                     feed_dict={self.tf_x: batch_x,
                                                                              self.tf_y: batch_y,
@@ -422,18 +467,20 @@ class BASE_RNN():
                     train_auc_label.append(batch_y.T[0])
                     train_auc_prob.append(np.array(train_outputs).T[0])
                 else:
+                    print("else2 else")
                     _, train_loss, train_outputs = sess.run([self.train_op, self.cost, self.predict], feed_dict={self.tf_x: batch_x,
                                                        self.tf_y: batch_y,
                                                        self.tf_bid_len: batch_len,
                                                        self.tf_market_price:batch_market_price,
                                                        self.tf_control_parameter:[self.ALPHA, self.BETA]
                                                        })
-                    #print train_outputs
+                    print("TRAIN OUTPUTS ARE:", train_outputs)
                     train_loss_arr.append(train_loss)
                     train_auc_label.append(batch_y.T[0])
                     train_auc_prob.append(np.array(train_outputs).T[0])
 
             if step % 100 == 0:
+                print("step % 100 == 0")
                 mean_anlp = np.array(train_anlp_arr[-99:]).mean()
                 mean_loss = np.array(train_loss_arr[-99:]).mean()
                 mean_auc = 0.0001
@@ -441,11 +488,11 @@ class BASE_RNN():
                     try:
                         mean_auc = roc_auc_score(np.reshape(train_auc_label, [1, -1])[0], np.reshape(train_auc_prob, [1, -1])[0])
                     except Exception:
-                        print "AUC ERROE"
+                        print("AUC ERROR")
                         continue
-
+                print("step % 100 == 0 log is below")
                 log = self.getStatStr("TRAIN", self.global_step, mean_auc, mean_loss, mean_anlp)
-                print log
+                print(log)
                 self.force_write(log)
                 train_loss_arr = []
                 train_anlp_arr = []
@@ -453,25 +500,37 @@ class BASE_RNN():
                 train_auc_prob = []
                 if self.TEST_FREQUENT:
                     self.run_test(sess)
-                    #self.save_model()
+                    self.save_model() #
 
             if self.global_step < 300:
+                print("global step < 300")
+                print("global step:", self.global_step)
+                test = self.global_step % 100
+                print("global_step % 100", test)
                 if self.global_step % 100 == 0:
+                    print("step % 100 == 0 for <300")
                     self.run_test(sess)
-                    #self.save_model()
+                    self.save_model() #
             elif self.global_step < 2000:
+                print("global step < 2000")
                 if self.global_step % 500 == 0:
+                    print("step % 500 == 0")
                     self.run_test(sess)
-                    #self.save_model()
+                    self.save_model() #
             elif self.global_step < 10000:
+                print("global step < 10000")
                 if self.global_step % 2000 == 0:
+                    print("step % 2000 == 0")
                     self.run_test(sess)
-                    #self.save_model()
+                    self.save_model() #
             elif self.global_step <= 21000:
+                print("global step <= 2100")
                 if self.global_step % 3000 == 0:
+                    print("step % 3000 == 0")
                     self.run_test(sess)
-                    #self.save_model()
+                    self.save_model() #
             else:
+                print("breakß")
                 break
 
     def run_model(self):
@@ -481,7 +540,7 @@ class BASE_RNN():
             self.train_test(sess)
 
     def save_model(self):
-        print "model name: ", self.filename, " ", self.global_step, "\n"
+        print("model name: ", self.filename, " ", self.global_step, "\n")
         self.saver.save(self.sess, "./saved_model/model" + self.filename, global_step=self.global_step)
 
     def getStatStr(self, category ,step, mean_auc, mean_loss, mean_anlp):
@@ -555,7 +614,7 @@ class BASE_RNN():
         mean_loss = np.array(loss_arr).mean()
         mean_anlp = np.array(anlp_arr).mean()
         log = self.getStatStr("TEST_WIN_DATA", self.global_step, 0.000001, mean_loss, mean_anlp)
-        print log
+        print(log)
         for i in range(0, int(self.test_data_lose.size / self.BATCH_SIZE)):
             test_batch_x, test_batch_y, test_batch_len, test_batch_market_price = self.test_data_lose.next(
                 self.BATCH_SIZE)
@@ -571,11 +630,13 @@ class BASE_RNN():
             anlp_arr.append(anlp)
             loss_arr.append(bid_loss)
         if len(auc_prob) > 0:
+            print("len(auc_prob) > 0")
             try:
                 auc = roc_auc_score(np.reshape(np.array(auc_label), [1, -1])[0],
                                 np.reshape(np.array(auc_prob), [1, -1])[0])
+                print("no AUC error")
             except Exception:
-                print "AUC ERROR"
+                print("AUC ERROR")
                 return
 
             auc_arr.append(auc)
@@ -584,7 +645,7 @@ class BASE_RNN():
         mean_anlp = np.array(anlp_arr).mean()
         log = self.getStatStr("TEST", self.global_step, mean_auc, mean_loss, mean_anlp)
         self.force_write(log)
-        print log
+        print(log)
         return mean_loss, mean_auc, mean_anlp
 
     def force_write(self, log):
