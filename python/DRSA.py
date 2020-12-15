@@ -36,7 +36,7 @@ if __name__ == '__main__':
     print("Arguments:",args)
 
 if len(sys.argv) < 2:
-    print "Please input learning rate. ex. 0.0001"
+    print("Please input learning rate. ex. 0.0001")
     sys.exit(0)
 
 LR = float(args.learning_rate)
