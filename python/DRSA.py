@@ -16,7 +16,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('input_file', help="Dataset", default = "support")
     parser.add_argument('learning_rate', type =restricted_float, help = "Input learning rate", default = 0.0001)
-    parser.add_argument('FEATURE_SIZE', help = "dataset input fields count, type = int)
+    parser.add_argument('FEATURE_SIZE', help = "dataset input fields count", type = int)
     parser.add_argument('MAX_DEN', help = "max input data dimension", default = 580000, type = int)
     parser.add_argument('EMB_DIM',help='EMB Dimension', default=32, type = int)
     parser.add_argument('BATCH_SIZE', default = 128, help="Batch size", type = int)
